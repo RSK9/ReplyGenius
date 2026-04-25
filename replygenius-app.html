@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReplyGenius — App</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A08;--surface:#131310;--surface2:#1A1A16;--surface3:#202018;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --amber:#F59E0B;--amber-light:#FCD34D;--amber-dim:rgba(245,158,11,.1);
+  --green:#10B981;--red:#EF4444;--blue:#3B82F6;
+  --text:#F5F0E8;--muted:#9E9880;--dim:#5C5840;
+  --sw:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;height:100vh;overflow:hidden}
+input,select,textarea,button{font-family:'DM Sans',sans-serif}
+
+/* ── AUTH ── */
+#auth{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;position:relative;overflow:hidden}
+#auth::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.08),transparent 65%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.auth-box{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:2.5rem;width:100%;max-width:400px;position:relative;z-index:1}
+.auth-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:21px;text-align:center;margin-bottom:2rem;letter-spacing:-.02em}
+.auth-logo em{font-style:normal;color:var(--amber)}
+.auth-tabs{display:flex;background:var(--bg);border-radius:9px;padding:3px;margin-bottom:1.5rem;gap:3px}
+.atab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;border-radius:7px;color:var(--muted);transition:all .2s;user-select:none}
+.atab.on{background:var(--surface);color:var(--text)}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.field input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:11px 13px;font-size:14px;color:var(--text);outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--amber)}
+.auth-submit{width:100%;background:var(--amber);color:#0A0A08;border:none;border-radius:9px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;margin-top:.25rem}
+.auth-submit:hover{background:var(--amber-light)}
+.auth-err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#FCA5A5;border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:.75rem;display:none}
+.auth-note{font-size:12px;color:var(--dim);text-align:center;margin-top:.75rem}
+.auth-note span{color:var(--amber);cursor:pointer}
+
+/* ── APP SHELL ── */
+#app{display:none;height:100vh}
+
+/* Sidebar */
+.sb{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;z-index:50}
+.sb-logo{padding:1.25rem 1.5rem;font-family:'Syne',sans-serif;font-weight:800;font-size:18px;border-bottom:1px solid var(--border);letter-spacing:-.02em}
+.sb-logo em{font-style:normal;color:var(--amber)}
+.sb-nav{flex:1;padding:.75rem;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;color:var(--muted);font-size:14px;transition:all .2s;user-select:none}
+.ni:hover{background:rgba(255,255,255,.03);color:var(--text)}
+.ni.on{background:var(--amber-dim);color:var(--amber)}
+.ni-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.sb-bottom{padding:1rem;border-top:1px solid var(--border)}
+.urow{display:flex;align-items:center;gap:10px;padding:6px}
+.uav{width:30px;height:30px;border-radius:50%;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--amber);flex-shrink:0}
+.uname{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logout{background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;transition:color .2s}
+.logout:hover{color:var(--muted)}
+
+/* Main */
+.main{margin-left:var(--sw);height:100vh;overflow-y:auto;padding:2rem 2.5rem}
+.page{display:none}
+.page.on{display:block}
+
+/* Page header */
+.ph{margin-bottom:2rem}
+.ph h1{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;letter-spacing:-.025em;margin-bottom:3px}
+.ph p{color:var(--muted);font-size:14px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:1.5rem}
+.card-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:1rem}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem}
+.sc .sl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:.3rem}
+.sc .sv{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:700;line-height:1}
+.sc .ss{font-size:11px;color:var(--dim);margin-top:3px}
+.sc.a .sv{color:var(--amber)}
+.sc.g .sv{color:var(--green)}
+.sc.b .sv{color:var(--blue)}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:1.5rem;width:fit-content}
+.tab{padding:8px 18px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .2s;user-select:none}
+.tab.on{background:var(--surface);color:var(--text)}
+
+/* Form elements */
+.fl{margin-bottom:1rem}
+.fl label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.fl textarea,.fl select,.fl input[type=text],.fl input[type=email],.fl input[type=password]{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 13px;font-size:14px;color:var(--text);outline:none;transition:border-color .2s;resize:vertical}
+.fl textarea:focus,.fl select:focus,.fl input:focus{border-color:var(--amber)}
+.fl textarea{min-height:90px;line-height:1.6}
+
+/* Buttons */
+.btn{padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;border:none;display:inline-block}
+.btn-amber{background:var(--amber);color:#0A0A08}
+.btn-amber:hover{background:var(--amber-light)}
+.btn-amber:disabled{opacity:.4;cursor:not-allowed}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--muted)}
+.btn-outline:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.btn-ghost{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:13px;transition:color .2s}
+.btn-ghost:hover{color:var(--text)}
+.btn-sm{padding:6px 14px;font-size:12px;border-radius:7px}
+.btn-full{width:100%;display:block;text-align:center}
+
+/* Generator layout */
+.gen-layout{display:grid;grid-template-columns:320px 1fr;gap:1.25rem;align-items:start}
+@media(max-width:900px){.gen-layout{grid-template-columns:1fr}}
+
+/* Result */
+.result-box{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:1.5rem}
+.result-label{font-size:11px;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:.75rem;display:flex;align-items:center;gap:6px}
+.result-text{font-size:14px;color:var(--text);line-height:1.75;white-space:pre-wrap}
+.result-actions{display:flex;gap:8px;margin-top:1rem}
+.empty-box{background:var(--surface);border:1px solid var(--border2);border-radius:13px;padding:3rem 2rem;text-align:center;color:var(--dim)}
+.empty-icon{font-size:2rem;margin-bottom:.5rem}
+
+/* Progress */
+.pbar{height:3px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:1.25rem;display:none}
+.pfill{height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--amber-light));transition:width .3s ease}
+
+/* History grid */
+.hist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.hcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;display:flex;flex-direction:column;transition:border-color .2s}
+.hcard:hover{border-color:var(--border2)}
+.hcard-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.htype{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:3px 10px;border-radius:5px}
+.htype-review{background:rgba(245,158,11,.1);color:var(--amber)}
+.htype-wa{background:rgba(16,185,129,.1);color:var(--green)}
+.hdate{font-size:11px;color:var(--dim)}
+.htext{font-size:13px;color:var(--muted);line-height:1.6;flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical}
+.hfooter{display:flex;gap:6px;margin-top:10px}
+.hbtn{flex:1;padding:5px 0;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:none;transition:all .2s;text-align:center}
+.hbtn:hover{border-color:var(--border2);color:var(--text)}
+.hbtn.del:hover{color:#FCA5A5;border-color:rgba(239,68,68,.3)}
+
+/* Google connect */
+.connect-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:2rem;text-align:center;max-width:460px}
+.connect-icon{font-size:3rem;margin-bottom:1rem}
+.connect-card h3{font-size:17px;font-weight:600;margin-bottom:.5rem}
+.connect-card p{font-size:14px;color:var(--muted);margin-bottom:1.5rem;line-height:1.7}
+.connect-steps{text-align:left;background:var(--surface2);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem}
+.cstep{display:flex;gap:10px;align-items:flex-start;margin-bottom:.75rem;font-size:13px;color:var(--muted)}
+.cstep:last-child{margin-bottom:0}
+.cstep-n{width:22px;height:22px;border-radius:50%;background:var(--amber-dim);border:1px solid rgba(245,158,11,.3);color:var(--amber);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.connected-row{display:flex;align-items:center;gap:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:1rem 1.25rem}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.conn-name{font-size:14px;font-weight:500;flex:1}
+.conn-disc{background:none;border:none;color:var(--dim);font-size:12px;cursor:pointer;transition:color .2s}
+.conn-disc:hover{color:#FCA5A5}
+
+/* Settings grid */
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem}
+.scard h3{font-size:15px;font-weight:600;margin-bottom:.2rem}
+.scard .sdesc{font-size:13px;color:var(--muted);margin-bottom:1.25rem}
+.key-wrap{position:relative}
+.key-wrap input{padding-right:60px}
+.key-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px}
+.plan-inner{background:var(--amber-dim);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:1rem 1.25rem;margin-bottom:1rem}
+.plan-name{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;color:var(--amber)}
+.plan-sub{font-size:12px;color:var(--dim);margin-top:2px}
+.ubar-wrap{margin:.75rem 0}
+.ubar-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px}
+.ubar-bg{height:5px;background:rgba(255,255,255,.05);border-radius:5px;overflow:hidden}
+.ubar-fill{height:100%;background:linear-gradient(90deg,var(--amber),var(--amber-light));transition:width .5s ease}
+#key-test-result{margin-top:10px;font-size:13px;display:none;padding:10px 14px;border-radius:8px;line-height:1.5}
+
+/* Toast */
+#toast{position:fixed;bottom:1.75rem;right:1.75rem;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:11px 18px;font-size:13px;color:var(--text);z-index:200;transform:translateY(16px);opacity:0;transition:all .3s;pointer-events:none;max-width:320px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{border-color:rgba(16,185,129,.3);color:var(--green)}
+#toast.err{border-color:rgba(239,68,68,.3);color:#FCA5A5}
+
+/* Filter pills */
+.fpills{display:flex;gap:6px;margin-bottom:1.1rem;flex-wrap:wrap}
+.fp{padding:5px 13px;border-radius:20px;font-size:12px;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .2s}
+.fp.on{background:var(--amber-dim);border-color:rgba(245,158,11,.3);color:var(--amber)}
+
+/* Recent list */
+.rlist{display:flex;flex-direction:column;gap:8px}
+.ritem{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:.9rem 1.1rem;display:flex;align-items:flex-start;gap:10px;transition:border-color .2s}
+.ritem:hover{border-color:var(--border2)}
+.rtype-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:7px}
+.dot-review{background:var(--amber)}
+.dot-wa{background:var(--green)}
+.rcontent{flex:1;min-width:0}
+.rtitle{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em}
+.rtext{font-size:13px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.5}
+.rmeta{font-size:11px;color:var(--dim);margin-top:3px}
+.rcopy{background:none;border:1px solid var(--border);color:var(--dim);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;flex-shrink:0;align-self:center;transition:all .2s}
+.rcopy:hover{border-color:var(--border2);color:var(--muted)}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth">
+  <div class="auth-box">
+    <div class="auth-logo">Reply<em>Genius</em></div>
+    <div class="auth-tabs">
+      <div class="atab on" onclick="switchTab('login')">Log in</div>
+      <div class="atab" onclick="switchTab('signup')">Sign up</div>
+    </div>
+    <div class="auth-err" id="auth-err"></div>
+    <div id="login-form">
+      <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password</label><input type="password" id="l-pw" placeholder="Your password"/></div>
+      <button class="auth-submit" onclick="doLogin()">Log in</button>
+      <p class="auth-note">No account? <span onclick="switchTab('signup')">Sign up free</span></p>
+    </div>
+    <div id="signup-form" style="display:none">
+      <div class="field"><label>Your name</label><input type="text" id="s-name" placeholder="Rahul Sharma"/></div>
+      <div class="field"><label>Email</label><input type="email" id="s-email" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password</label><input type="password" id="s-pw" placeholder="8+ characters"/></div>
+      <button class="auth-submit" onclick="doSignup()">Create free account</button>
+      <p class="auth-note">By signing up you agree to our Terms.</p>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- Sidebar -->
+  <div class="sb">
+    <div class="sb-logo">Reply<em>Genius</em></div>
+    <nav class="sb-nav">
+      <div class="ni on" onclick="goPage('dashboard')"><span class="ni-icon">▣</span>Dashboard</div>
+      <div class="ni" onclick="goPage('reviews')"><span class="ni-icon">⭐</span>Review Responder</div>
+      <div class="ni" onclick="goPage('whatsapp')"><span class="ni-icon">💬</span>WhatsApp Replies</div>
+      <div class="ni" onclick="goPage('google')"><span class="ni-icon">🔗</span>Google Connect</div>
+      <div class="ni" onclick="goPage('history')"><span class="ni-icon">◷</span>History</div>
+      <div class="ni" onclick="goPage('settings')"><span class="ni-icon">⚙</span>Settings</div>
+    </nav>
+    <div class="sb-bottom">
+      <div class="urow">
+        <div class="uav" id="sb-av">R</div>
+        <span class="uname" id="sb-name">Loading...</span>
+        <button class="logout" onclick="doLogout()">⏏</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page on" id="page-dashboard">
+      <div class="ph">
+        <h1 id="dash-greet">Good morning ✦</h1>
+        <p>Your reply activity at a glance.</p>
+      </div>
+      <div class="stats-row">
+        <div class="sc a"><div class="sl">Total replies</div><div class="sv" id="st-total">0</div><div class="ss">All time</div></div>
+        <div class="sc g"><div class="sl">This month</div><div class="sv" id="st-month">0</div><div class="ss" id="st-limit">15 free / mo</div></div>
+        <div class="sc b"><div class="sl">Reviews replied</div><div class="sv" id="st-reviews">0</div><div class="ss">Google reviews</div></div>
+        <div class="sc"><div class="sl">WhatsApp replies</div><div class="sv" id="st-wa">0</div><div class="ss">Enquiries handled</div></div>
+        <div class="sc"><div class="sl">Plan</div><div class="sv" id="st-plan" style="font-size:1.1rem;margin-top:4px">Starter</div><div class="ss"><span style="color:var(--amber);cursor:pointer" onclick="goPage('settings')">Upgrade →</span></div></div>
+      </div>
+      <div class="card-title">Recent replies</div>
+      <div class="rlist" id="recent-list"><p style="color:var(--dim);font-size:14px">No replies yet — <span style="color:var(--amber);cursor:pointer" onclick="goPage('reviews')">generate your first one</span>.</p></div>
+    </div>
+
+    <!-- REVIEW RESPONDER -->
+    <div class="page" id="page-reviews">
+      <div class="ph">
+        <h1>Review Responder</h1>
+        <p>Paste any Google review and get a professional response instantly.</p>
+      </div>
+      <div class="pbar" id="rev-bar"><div class="pfill" id="rev-fill"></div></div>
+      <div class="gen-layout">
+        <div class="card">
+          <div class="fl">
+            <label>Paste the review</label>
+            <textarea id="rev-input" placeholder="Paste the customer's review here...&#10;&#10;e.g. 'Food was amazing but the service was slow. The biryani was the best I've had in Delhi but we waited 40 minutes for our order.'" style="min-height:130px"></textarea>
+          </div>
+          <div class="fl">
+            <label>Star rating</label>
+            <select id="rev-stars">
+              <option value="5">⭐⭐⭐⭐⭐ 5 stars — Praise</option>
+              <option value="4">⭐⭐⭐⭐ 4 stars — Mostly positive</option>
+              <option value="3">⭐⭐⭐ 3 stars — Mixed</option>
+              <option value="2" selected>⭐⭐ 2 stars — Negative</option>
+              <option value="1">⭐ 1 star — Very unhappy</option>
+            </select>
+          </div>
+          <div class="fl">
+            <label>Response language</label>
+            <select id="rev-lang">
+              <option>English</option>
+              <option>Hindi</option>
+              <option>Hinglish (mix)</option>
+            </select>
+          </div>
+          <div class="fl">
+            <label>Tone</label>
+            <select id="rev-tone">
+              <option>Professional & warm</option>
+              <option>Friendly & casual</option>
+              <option>Apologetic & empathetic</option>
+              <option>Confident & assertive</option>
+            </select>
+          </div>
+          <button class="btn btn-amber btn-full" id="rev-btn" onclick="generateReview()">Generate response ✦</button>
+        </div>
+        <div id="rev-output">
+          <div class="empty-box">
+            <div class="empty-icon">⭐</div>
+            <p>Your AI-generated review response will appear here.</p>
+            <p style="margin-top:5px;font-size:13px">Paste a review on the left and click generate.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tips -->
+      <div style="margin-top:2rem">
+        <div class="card-title">Quick tips</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+          <div class="card" style="padding:1rem">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px;color:var(--amber)">For 1-2 star reviews</div>
+            <p style="font-size:13px;color:var(--muted)">Always apologise first. Acknowledge the specific issue. Invite them back. Never argue or make excuses.</p>
+          </div>
+          <div class="card" style="padding:1rem">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px;color:var(--green)">For 5 star reviews</div>
+            <p style="font-size:13px;color:var(--muted)">Thank them by name if possible. Mention something specific from their review. Invite them back.</p>
+          </div>
+          <div class="card" style="padding:1rem">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px;color:var(--blue)">Response speed matters</div>
+            <p style="font-size:13px;color:var(--muted)">Businesses that reply within 24 hours get 33% more future reviews. Reply fast, every time.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHATSAPP -->
+    <div class="page" id="page-whatsapp">
+      <div class="ph">
+        <h1>WhatsApp Reply Generator</h1>
+        <p>Paste any customer message and get a smart, professional reply in seconds.</p>
+      </div>
+      <div class="pbar" id="wa-bar"><div class="pfill" id="wa-fill"></div></div>
+      <div class="gen-layout">
+        <div class="card">
+          <div class="fl">
+            <label>Customer's message</label>
+            <textarea id="wa-input" placeholder="Paste the WhatsApp message here...&#10;&#10;e.g. 'Hi, what are your timings? Do you have home delivery? Also what is the price of the veg thali?'" style="min-height:120px"></textarea>
+          </div>
+          <div class="fl">
+            <label>Message type</label>
+            <select id="wa-type">
+              <option>General enquiry</option>
+              <option>Price / menu question</option>
+              <option>Booking / reservation</option>
+              <option>Complaint</option>
+              <option>Delivery / order status</option>
+              <option>Opening hours</option>
+              <option>Custom service request</option>
+            </select>
+          </div>
+          <div class="fl">
+            <label>Reply language</label>
+            <select id="wa-lang">
+              <option>English</option>
+              <option>Hindi</option>
+              <option>Hinglish (mix)</option>
+            </select>
+          </div>
+          <div class="fl">
+            <label>Tone</label>
+            <select id="wa-tone">
+              <option>Friendly & helpful</option>
+              <option>Professional & formal</option>
+              <option>Warm & personal</option>
+              <option>Quick & concise</option>
+            </select>
+          </div>
+          <button class="btn btn-amber btn-full" id="wa-btn" onclick="generateWA()">Generate reply ✦</button>
+        </div>
+        <div id="wa-output">
+          <div class="empty-box">
+            <div class="empty-icon">💬</div>
+            <p>Your AI-generated WhatsApp reply will appear here.</p>
+            <p style="margin-top:5px;font-size:13px">Paste a customer message and click generate.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Common templates -->
+      <div style="margin-top:2rem">
+        <div class="card-title">Common message templates — click to load</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+          <div class="card" style="padding:.9rem;cursor:pointer;transition:all .2s" onmouseenter="this.style.borderColor='rgba(245,158,11,.3)'" onmouseleave="this.style.borderColor=''" onclick="loadTemplate('price')">
+            <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:4px">Price enquiry</div>
+            <p style="font-size:12px;color:var(--muted)">"Bhai kitna price hai?" type messages</p>
+          </div>
+          <div class="card" style="padding:.9rem;cursor:pointer;transition:all .2s" onmouseenter="this.style.borderColor='rgba(245,158,11,.3)'" onmouseleave="this.style.borderColor=''" onclick="loadTemplate('hours')">
+            <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:4px">Opening hours</div>
+            <p style="font-size:12px;color:var(--muted)">"What time do you open/close?"</p>
+          </div>
+          <div class="card" style="padding:.9rem;cursor:pointer;transition:all .2s" onmouseenter="this.style.borderColor='rgba(245,158,11,.3)'" onmouseleave="this.style.borderColor=''" onclick="loadTemplate('booking')">
+            <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:4px">Table booking</div>
+            <p style="font-size:12px;color:var(--muted)">"Can I book a table for 4 tonight?"</p>
+          </div>
+          <div class="card" style="padding:.9rem;cursor:pointer;transition:all .2s" onmouseenter="this.style.borderColor='rgba(245,158,11,.3)'" onmouseleave="this.style.borderColor=''" onclick="loadTemplate('complaint')">
+            <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:4px">Complaint</div>
+            <p style="font-size:12px;color:var(--muted)">"My order was wrong / cold / late"</p>
+          </div>
+          <div class="card" style="padding:.9rem;cursor:pointer;transition:all .2s" onmouseenter="this.style.borderColor='rgba(245,158,11,.3)'" onmouseleave="this.style.borderColor=''" onclick="loadTemplate('delivery')">
+            <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:4px">Delivery query</div>
+            <p style="font-size:12px;color:var(--muted)">"Do you deliver to my area?"</p>
+          </div>
+          <div class="card" style="padding:.9rem;cursor:pointer;transition:all .2s" onmouseenter="this.style.borderColor='rgba(245,158,11,.3)'" onmouseleave="this.style.borderColor=''" onclick="loadTemplate('available')">
+            <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:4px">Availability</div>
+            <p style="font-size:12px;color:var(--muted)">"Are you open today / this Sunday?"</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GOOGLE CONNECT -->
+    <div class="page" id="page-google">
+      <div class="ph">
+        <h1>Google Business Connect</h1>
+        <p>Connect your Google Business Profile to pull reviews automatically.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start">
+        <div id="google-connect-panel">
+          <div class="connect-card">
+            <div class="connect-icon">🔗</div>
+            <h3>Connect Google Business</h3>
+            <p>Once connected, your reviews appear in the dashboard automatically. No copy-pasting needed.</p>
+            <div class="connect-steps">
+              <div class="cstep"><div class="cstep-n">1</div><span>Click Connect below and sign in with your Google account</span></div>
+              <div class="cstep"><div class="cstep-n">2</div><span>Select the Google Business Profile for your business</span></div>
+              <div class="cstep"><div class="cstep-n">3</div><span>Reviews appear in your dashboard automatically every hour</span></div>
+              <div class="cstep"><div class="cstep-n">4</div><span>One-click to generate and post responses directly to Google</span></div>
+            </div>
+            <button class="btn btn-amber btn-full" onclick="connectGoogle()" id="google-connect-btn">Connect Google Business →</button>
+            <p style="font-size:12px;color:var(--dim);margin-top:.75rem;text-align:center">Requires Google verification (5-10 days after app submission). Currently in manual mode.</p>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <div class="card-title">Verification status</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px;font-size:14px">
+                <span style="color:var(--amber)">⏳</span>
+                <span style="color:var(--muted)">Awaiting Google OAuth verification</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:14px">
+                <span style="color:var(--green)">✓</span>
+                <span style="color:var(--muted)">App privacy policy submitted</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:14px">
+                <span style="color:var(--green)">✓</span>
+                <span style="color:var(--muted)">Business Profile API access requested</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;font-size:14px">
+                <span style="color:var(--amber)">⏳</span>
+                <span style="color:var(--muted)">Expected: 5-10 business days</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">While you wait — manual mode</div>
+            <p style="font-size:14px;color:var(--muted);margin-bottom:1rem;line-height:1.7">The Review Responder works perfectly right now without the Google connection. You can:</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--amber);flex-shrink:0">1.</span>Open Google Maps → find your business → click Reviews</div>
+              <div style="font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--amber);flex-shrink:0">2.</span>Copy a review text</div>
+              <div style="font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--amber);flex-shrink:0">3.</span>Paste in Review Responder → generate → copy response</div>
+              <div style="font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--amber);flex-shrink:0">4.</span>Go back to Google → click Reply → paste</div>
+            </div>
+            <button class="btn btn-amber" style="margin-top:1.25rem" onclick="goPage('reviews')">Go to Review Responder →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="page" id="page-history">
+      <div class="ph">
+        <h1>Reply history</h1>
+        <p>All your generated responses saved in one place.</p>
+      </div>
+      <div class="fpills">
+        <div class="fp on" data-f="all" onclick="filterHist(this)">All</div>
+        <div class="fp" data-f="review" onclick="filterHist(this)">Reviews</div>
+        <div class="fp" data-f="whatsapp" onclick="filterHist(this)">WhatsApp</div>
+      </div>
+      <div class="hist-grid" id="hist-grid"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="ph">
+        <h1>Settings</h1>
+        <p>Configure your AI engine, brand voice, and account.</p>
+      </div>
+      <div class="settings-grid">
+
+        <div class="scard">
+          <h3>AI Engine (Groq)</h3>
+          <p class="sdesc">Powered by Groq — free, fast, works in India. Get your key at console.groq.com.</p>
+          <div class="fl">
+            <label>Groq API Key</label>
+            <div class="key-wrap">
+              <input type="password" id="api-key" placeholder="gsk_..."/>
+              <button class="key-toggle" onclick="toggleKey()">show</button>
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--dim);margin-bottom:1rem">Go to <a href="https://console.groq.com" target="_blank" style="color:var(--amber)">console.groq.com</a> → Sign up → API Keys → Create API Key (starts with gsk_). Stored locally only.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-amber" onclick="saveKey()">Save key</button>
+            <button class="btn btn-outline" onclick="testKey()">Test key</button>
+          </div>
+          <div id="key-test-result"></div>
+        </div>
+
+        <div class="scard">
+          <h3>Business profile</h3>
+          <p class="sdesc">Tell ReplyGenius about your business so every reply sounds like you.</p>
+          <div class="fl"><label>Business name</label><input type="text" id="biz-name" placeholder="e.g. Sharma Family Restaurant"/></div>
+          <div class="fl"><label>Business type</label>
+            <select id="biz-type">
+              <option>Restaurant / dhaba</option>
+              <option>Cafe / coffee shop</option>
+              <option>Beauty salon / parlour</option>
+              <option>Gym / fitness centre</option>
+              <option>Medical clinic / pharmacy</option>
+              <option>Clothing / fashion store</option>
+              <option>Electronics / mobile shop</option>
+              <option>Hotel / guest house</option>
+              <option>Real estate agent</option>
+              <option>Sweet shop / bakery</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="fl"><label>City / area</label><input type="text" id="biz-city" placeholder="e.g. Karol Bagh, Delhi"/></div>
+          <div class="fl"><label>Business notes (optional)</label><textarea id="biz-notes" placeholder="Anything special about your business? e.g. Family-run since 1985, known for our dal makhani, open 7 days a week, specialise in North Indian cuisine..."></textarea></div>
+          <button class="btn btn-amber" onclick="saveBiz()">Save profile</button>
+        </div>
+
+        <div class="scard">
+          <h3>Subscription</h3>
+          <p class="sdesc">Manage your plan and usage.</p>
+          <div class="plan-inner">
+            <div class="plan-name" id="plan-name-disp">Starter</div>
+            <div class="plan-sub">Free — 15 replies per month</div>
+          </div>
+          <div class="ubar-wrap">
+            <div class="ubar-labels"><span>Replies used this month</span><span id="usage-label">0 / 15</span></div>
+            <div class="ubar-bg"><div class="ubar-fill" id="usage-fill" style="width:0%"></div></div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <button class="btn btn-amber" onclick="doUpgrade()">Upgrade to Pro — ₹999/mo</button>
+            <p style="font-size:12px;color:var(--dim);margin-top:.5rem">Unlimited replies, all features. 7-day free trial.</p>
+          </div>
+        </div>
+
+        <div class="scard">
+          <h3>Account</h3>
+          <p class="sdesc">Your profile details.</p>
+          <div class="fl"><label>Name</label><input type="text" id="acc-name" placeholder="Your name"/></div>
+          <div class="fl"><label>Email</label><input type="email" id="acc-email" placeholder="you@example.com"/></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-amber" onclick="saveAccount()">Save changes</button>
+            <button class="btn" style="background:transparent;border:1px solid rgba(239,68,68,.2);color:#FCA5A5" onclick="if(confirm('Delete account?')){deleteAccount()}">Delete account</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── STORAGE ──
+const db={get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),del:k=>localStorage.removeItem(k)};
+
+// ── AUTH ──
+let cu=null;
+function switchTab(t){
+  document.querySelectorAll('.atab').forEach((a,i)=>a.classList.toggle('on',(t==='login'&&i===0)||(t==='signup'&&i===1)));
+  document.getElementById('login-form').style.display=t==='login'?'block':'none';
+  document.getElementById('signup-form').style.display=t==='signup'?'block':'none';
+  document.getElementById('auth-err').style.display='none';
+}
+function showErr(m){const e=document.getElementById('auth-err');e.textContent=m;e.style.display='block'}
+function doLogin(){
+  const em=document.getElementById('l-email').value.trim(),pw=document.getElementById('l-pw').value;
+  if(!em||!pw){showErr('Please fill all fields.');return}
+  const users=db.get('rg_users')||{};
+  if(!users[em]||users[em].pw!==btoa(pw)){showErr('Invalid email or password.');return}
+  cu={email:em,...users[em]};db.set('rg_sess',em);enterApp();
+}
+function doSignup(){
+  const name=document.getElementById('s-name').value.trim(),em=document.getElementById('s-email').value.trim(),pw=document.getElementById('s-pw').value;
+  if(!name||!em||!pw){showErr('Please fill all fields.');return}
+  if(pw.length<8){showErr('Password must be 8+ characters.');return}
+  if(!em.includes('@')){showErr('Enter a valid email.');return}
+  const users=db.get('rg_users')||{};
+  if(users[em]){showErr('Account already exists.');return}
+  users[em]={name,pw:btoa(pw),plan:'starter',replies:[],settings:{}};
+  db.set('rg_users',users);cu={email:em,...users[em]};db.set('rg_sess',em);enterApp();
+}
+function doLogout(){db.del('rg_sess');cu=null;document.getElementById('app').style.display='none';document.getElementById('auth').style.display='flex';}
+function enterApp(){
+  document.getElementById('auth').style.display='none';
+  document.getElementById('app').style.display='block';
+  loadUserUI();refreshDash();
+}
+window.addEventListener('load',()=>{
+  const s=db.get('rg_sess');
+  if(s){const u=db.get('rg_users')||{};if(u[s]){cu={email:s,...u[s]};document.getElementById('auth').style.display='none';document.getElementById('app').style.display='block';loadUserUI();refreshDash();}}
+});
+function loadUserUI(){
+  const n=cu.name||cu.email;
+  document.getElementById('sb-name').textContent=n;
+  document.getElementById('sb-av').textContent=n.charAt(0).toUpperCase();
+  const s=cu.settings||{};
+  if(s.apiKey)document.getElementById('api-key').value=s.apiKey;
+  if(s.bizName)document.getElementById('biz-name').value=s.bizName;
+  if(s.bizType)document.getElementById('biz-type').value=s.bizType;
+  if(s.bizCity)document.getElementById('biz-city').value=s.bizCity;
+  if(s.bizNotes)document.getElementById('biz-notes').value=s.bizNotes;
+  document.getElementById('acc-name').value=cu.name||'';
+  document.getElementById('acc-email').value=cu.email||'';
+}
+
+// ── NAVIGATION ──
+function goPage(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
+  document.getElementById('page-'+p).classList.add('on');
+  document.querySelectorAll('.ni').forEach(n=>{if(n.textContent.trim().toLowerCase().replace(/[^a-z]/g,'').includes(p.replace('whatsapp','whatsapp').replace('google','google')))n.classList.add('on')});
+  if(p==='dashboard')refreshDash();
+  if(p==='history')renderHist('all');
+  if(p==='settings')refreshSettings();
+}
+
+// ── DASHBOARD ──
+function refreshDash(){
+  const h=new Date().getHours();
+  const g=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  const firstName=(cu.name||'').split(' ')[0];
+  document.getElementById('dash-greet').textContent=g+(firstName?' '+firstName:'')+' ✦';
+  const reps=getReplies();
+  const now=new Date();
+  const thisMonth=reps.filter(r=>{const d=new Date(r.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()});
+  document.getElementById('st-total').textContent=reps.length;
+  document.getElementById('st-month').textContent=thisMonth.length;
+  document.getElementById('st-reviews').textContent=reps.filter(r=>r.type==='review').length;
+  document.getElementById('st-wa').textContent=reps.filter(r=>r.type==='whatsapp').length;
+  document.getElementById('st-plan').textContent=cu.plan==='pro'?'Pro':'Starter';
+  const rl=document.getElementById('recent-list');
+  if(!reps.length){rl.innerHTML='<p style="color:var(--dim);font-size:14px">No replies yet — <span style="color:var(--amber);cursor:pointer" onclick="goPage(\'reviews\')">generate your first one</span>.</p>';return}
+  rl.innerHTML=[...reps].reverse().slice(0,6).map(r=>`
+    <div class="ritem">
+      <div class="rtype-dot ${r.type==='review'?'dot-review':'dot-wa'}"></div>
+      <div class="rcontent">
+        <div class="rtitle">${r.type==='review'?'⭐ Review Response':'💬 WhatsApp Reply'}</div>
+        <div class="rtext">${esc(r.response)}</div>
+        <div class="rmeta">${r.bizName||'Your business'} · ${fmtDate(r.date)}</div>
+      </div>
+      <button class="rcopy" onclick="copyTxt(\`${r.response.replace(/`/g,'\\`')}\`,this)">Copy</button>
+    </div>
+  `).join('');
+}
+
+// ── GENERATE REVIEW RESPONSE ──
+async function generateReview(){
+  const key=(cu.settings||{}).apiKey;
+  if(!key){toast('Add your Groq API key in Settings first.','err');goPage('settings');return}
+  const review=document.getElementById('rev-input').value.trim();
+  if(!review){toast('Please paste a review first.','err');return}
+  if(!checkLimit())return;
+  const stars=document.getElementById('rev-stars').value;
+  const lang=document.getElementById('rev-lang').value;
+  const tone=document.getElementById('rev-tone').value;
+  const s=cu.settings||{};
+  const bizInfo=s.bizName?`Business: ${s.bizName} (${s.bizType||'small business'}${s.bizCity?', '+s.bizCity:''})`:s.bizType||'small business';
+  const prompt=`You are writing a professional response to a Google review on behalf of a ${bizInfo}.
+The customer gave ${stars} star(s).
+Response should be: ${tone}.
+Write the response in: ${lang}.
+${s.bizNotes?'Business notes: '+s.bizNotes:''}
+
+Customer review: "${review}"
+
+Rules:
+- Address the customer's specific points
+- For negative reviews: sincerely apologise, acknowledge the issue, invite them back
+- For positive reviews: thank them warmly, mention something specific they said
+- Keep it 60-120 words
+- Sound human and genuine, never robotic or templated
+- ${lang==='Hindi'?'Write entirely in Hindi using Devanagari script':lang==='Hinglish (mix)'?'Mix Hindi and English naturally as Indian businesses do':'Write in professional English'}
+- Do NOT include any subject line, label, or preamble — just the response text
+
+Write only the response text, nothing else.`;
+  await runGenerate('rev',key,prompt,'review',review,stars);
+}
+
+// ── GENERATE WHATSAPP REPLY ──
+async function generateWA(){
+  const key=(cu.settings||{}).apiKey;
+  if(!key){toast('Add your Groq API key in Settings first.','err');goPage('settings');return}
+  const msg=document.getElementById('wa-input').value.trim();
+  if(!msg){toast('Please paste a customer message first.','err');return}
+  if(!checkLimit())return;
+  const type=document.getElementById('wa-type').value;
+  const lang=document.getElementById('wa-lang').value;
+  const tone=document.getElementById('wa-tone').value;
+  const s=cu.settings||{};
+  const bizInfo=s.bizName?`${s.bizName} (${s.bizType||'small business'}${s.bizCity?', '+s.bizCity:''})`:s.bizType||'small business';
+  const prompt=`You are writing a WhatsApp reply for ${bizInfo}.
+Message type: ${type}
+Tone: ${tone}
+Language: ${lang}
+${s.bizNotes?'Business info: '+s.bizNotes:''}
+
+Customer message: "${msg}"
+
+Rules:
+- Reply naturally as the business owner would on WhatsApp
+- Keep it conversational and appropriate for WhatsApp (not too formal)
+- Be helpful and answer what you can; for specific details like exact prices or availability, mention they should call or confirm
+- 30-80 words is ideal for WhatsApp
+- ${lang==='Hindi'?'Write entirely in Hindi':lang==='Hinglish (mix)'?'Use natural Hinglish as Indians do on WhatsApp — mix freely':'Write in natural English'}
+- Do NOT include any preamble — just the reply text
+
+Write only the WhatsApp reply, nothing else.`;
+  await runGenerate('wa',key,prompt,'whatsapp',msg,null);
+}
+
+async function runGenerate(prefix,key,prompt,type,input,stars){
+  const btn=document.getElementById(prefix+'-btn');
+  const bar=document.getElementById(prefix+'-bar');
+  const fill=document.getElementById(prefix+'-fill');
+  const output=document.getElementById(prefix+'-output');
+  btn.disabled=true;btn.textContent='Generating...';
+  bar.style.display='block';let p=0;
+  const t=setInterval(()=>{p=Math.min(p+8,88);fill.style.width=p+'%';},200);
+  try{
+    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:400,temperature:0.85})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    const text=data.choices[0].message.content.trim();
+    clearInterval(t);fill.style.width='100%';
+    setTimeout(()=>{bar.style.display='none';fill.style.width='0%';},400);
+    const s=cu.settings||{};
+    const repObj={type,input,response:text,stars:stars||null,date:new Date().toISOString(),bizName:s.bizName||''};
+    const reps=getReplies();reps.push(repObj);setReplies(reps);
+    const isReview=type==='review';
+    output.innerHTML=`
+      <div class="result-box">
+        <div class="result-label">${isReview?'⭐ Google Review Response':'💬 WhatsApp Reply'}</div>
+        ${isReview?`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:.9rem;margin-bottom:1rem;font-size:13px;color:var(--muted);line-height:1.6;font-style:italic">"${esc(input)}"</div>`:''}
+        <div class="result-text" id="rt-${prefix}">${esc(text)}</div>
+        <div class="result-actions">
+          <button class="btn btn-amber btn-sm" onclick="copyTxt(\`${text.replace(/`/g,'\\`')}\`,this)">Copy response</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('${prefix}-input').value='';document.getElementById('${prefix}-output').innerHTML='<div class=\\'empty-box\\'><div class=\\'empty-icon\\'>${isReview?'⭐':'💬'}</div><p>Generate another reply.</p></div>'">Clear</button>
+        </div>
+        ${isReview?`<div style="margin-top:1rem;padding:1rem;background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.15);border-radius:9px;font-size:13px;color:var(--muted)">📋 <strong style="color:var(--text)">How to post:</strong> Go to Google Maps → find your business → Reviews → find this review → click Reply → paste this response.</div>`:''}
+      </div>`;
+    toast(isReview?'Response generated!':'Reply generated!','ok');
+  }catch(e){
+    clearInterval(t);bar.style.display='none';
+    toast('Error: '+e.message,'err');
+  }
+  btn.disabled=false;btn.textContent=prefix==='rev'?'Generate response ✦':'Generate reply ✦';
+}
+
+// ── LIMIT CHECK ──
+function checkLimit(){
+  if(cu.plan==='pro')return true;
+  const reps=getReplies();const now=new Date();
+  const used=reps.filter(r=>{const d=new Date(r.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()}).length;
+  if(used>=15){toast('Monthly limit reached. Upgrade to Pro for unlimited replies.','err');goPage('settings');return false;}
+  return true;
+}
+
+// ── TEMPLATES ──
+const templates={
+  price:"Hi, kitna price hai aapka? Kya menu bhi share kar sakte ho? Delivery available hai kya?",
+  hours:"Hello, what are your opening and closing timings? Are you open on Sundays?",
+  booking:"Hi, I want to book a table for 4 people this Saturday evening around 8pm. Is it available?",
+  complaint:"My order was completely wrong and also cold when it arrived. Very disappointing. I want a refund.",
+  delivery:"Do you deliver to Rohini Sector 15? What is the delivery charge and minimum order?",
+  available:"Are you open today? Also do you have any special offers running currently?"
+};
+function loadTemplate(k){
+  const t=templates[k];if(t){document.getElementById('wa-input').value=t;toast('Template loaded!','ok');}
+}
+
+// ── HISTORY ──
+function filterHist(el){
+  document.querySelectorAll('.fp').forEach(p=>p.classList.remove('on'));el.classList.add('on');
+  renderHist(el.dataset.f);
+}
+function renderHist(f){
+  const reps=getReplies();
+  const filtered=f==='all'?reps:reps.filter(r=>r.type===f);
+  const grid=document.getElementById('hist-grid');
+  if(!filtered.length){grid.innerHTML=`<div style="text-align:center;padding:3rem;color:var(--dim);grid-column:1/-1"><div style="font-size:2rem;margin-bottom:.5rem">◷</div><p style="font-size:14px">No replies found.</p></div>`;return}
+  grid.innerHTML=[...filtered].reverse().map((r,i)=>`
+    <div class="hcard">
+      <div class="hcard-header">
+        <span class="htype ${r.type==='review'?'htype-review':'htype-wa'}">${r.type==='review'?'Review':'WhatsApp'}</span>
+        <span class="hdate">${fmtDate(r.date)}</span>
+      </div>
+      <div class="htext">${esc(r.response)}</div>
+      <div class="hfooter">
+        <button class="hbtn" onclick="copyTxt(\`${r.response.replace(/`/g,'\\`')}\`,this)">Copy</button>
+        <button class="hbtn del" onclick="delReply(${filtered.length-1-i},'${f}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+function delReply(idx,f){
+  const reps=getReplies();
+  const sorted=f==='all'?[...reps].reverse():[...reps.filter(r=>r.type===f)].reverse();
+  const rep=sorted[idx];const i=reps.findIndex(r=>r.date===rep.date&&r.response===rep.response);
+  if(i>-1){reps.splice(i,1);setReplies(reps);}renderHist(f);toast('Deleted.','');
+}
+
+// ── GOOGLE CONNECT (DEMO) ──
+function connectGoogle(){
+  const btn=document.getElementById('google-connect-btn');
+  btn.textContent='Connecting...';btn.disabled=true;
+  setTimeout(()=>{
+    btn.textContent='Connect Google Business →';btn.disabled=false;
+    toast('Google verification pending — manual mode active for now.','');
+  },1500);
+}
+
+// ── SETTINGS ──
+function saveKey(){
+  const k=document.getElementById('api-key').value.trim();
+  if(!k){toast('Enter an API key.','err');return}
+  updateSettings({apiKey:k});toast('API key saved!','ok');
+}
+function toggleKey(){const i=document.getElementById('api-key');i.type=i.type==='password'?'text':'password';}
+async function testKey(){
+  const k=document.getElementById('api-key').value.trim()||(cu.settings||{}).apiKey;
+  const res=document.getElementById('key-test-result');
+  if(!k){res.style.display='block';res.style.background='rgba(239,68,68,.08)';res.style.color='#FCA5A5';res.textContent='No key found. Paste and save your key first.';return}
+  res.style.display='block';res.style.background='rgba(255,255,255,.03)';res.style.color='var(--muted)';res.textContent='Testing...';
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+k},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:'Say "ReplyGenius works!" and nothing else'}],max_tokens:20})});
+    const d=await r.json();
+    if(d.error){res.style.background='rgba(239,68,68,.08)';res.style.color='#FCA5A5';res.textContent='Error: '+d.error.message;}
+    else{res.style.background='rgba(16,185,129,.06)';res.style.color='var(--green)';res.textContent='✓ Key works! '+d.choices[0].message.content.trim();}
+  }catch(e){res.style.background='rgba(239,68,68,.08)';res.style.color='#FCA5A5';res.textContent='Network error: '+e.message;}
+}
+function saveBiz(){
+  updateSettings({bizName:document.getElementById('biz-name').value.trim(),bizType:document.getElementById('biz-type').value,bizCity:document.getElementById('biz-city').value.trim(),bizNotes:document.getElementById('biz-notes').value.trim()});
+  toast('Business profile saved!','ok');
+}
+function saveAccount(){
+  const n=document.getElementById('acc-name').value.trim();
+  if(!n){toast('Name cannot be empty.','err');return}
+  const users=db.get('rg_users')||{};users[cu.email].name=n;db.set('rg_users',users);cu.name=n;
+  document.getElementById('sb-name').textContent=n;document.getElementById('sb-av').textContent=n.charAt(0).toUpperCase();
+  toast('Account updated!','ok');
+}
+function deleteAccount(){
+  const users=db.get('rg_users')||{};delete users[cu.email];db.set('rg_users',users);doLogout();
+}
+function doUpgrade(){
+  toast('In a real product this opens Stripe. Upgrading locally for demo...','');
+  setTimeout(()=>{
+    const users=db.get('rg_users')||{};users[cu.email].plan='pro';db.set('rg_users',users);cu.plan='pro';
+    document.getElementById('plan-name-disp').textContent='Pro';
+    document.getElementById('usage-label').textContent='0 / ∞';
+    document.getElementById('usage-fill').style.width='0%';
+    document.getElementById('st-plan').textContent='Pro';
+    toast('Upgraded to Pro! Unlimited replies unlocked.','ok');
+  },600);
+}
+function refreshSettings(){
+  const reps=getReplies();const now=new Date();
+  const used=reps.filter(r=>{const d=new Date(r.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()}).length;
+  const isPro=cu.plan==='pro';
+  document.getElementById('usage-fill').style.width=isPro?'0%':Math.min(100,(used/15)*100)+'%';
+  document.getElementById('usage-label').textContent=isPro?used+' / ∞':used+' / 15';
+  document.getElementById('plan-name-disp').textContent=isPro?'Pro':'Starter';
+}
+function updateSettings(u){
+  const users=db.get('rg_users')||{};
+  users[cu.email].settings={...(users[cu.email].settings||{}),...u};
+  db.set('rg_users',users);cu.settings=users[cu.email].settings;
+}
+
+// ── HELPERS ──
+function getReplies(){const users=db.get('rg_users')||{};return(users[cu.email]&&users[cu.email].replies)||[]}
+function setReplies(r){const users=db.get('rg_users')||{};users[cu.email].replies=r;db.set('rg_users',users);}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtDate(iso){return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+function copyTxt(text,btn){
+  navigator.clipboard.writeText(text).then(()=>{
+    if(btn){const o=btn.textContent;btn.textContent='Copied!';setTimeout(()=>btn.textContent=o,1500);}
+    toast('Copied!','ok');
+  });
+}
+let _tt;
+function toast(msg,type){
+  const t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');
+  clearTimeout(_tt);_tt=setTimeout(()=>t.className='',3000);
+}
+</script>
+</body>
+</html>
